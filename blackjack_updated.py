@@ -22,7 +22,25 @@ class Params():
         # Filepath to fixed policy file (only used for 'fixed_policy' input)
         self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy.policy')
         
+        # Which state mapping algorithm to use (1 or 2)
+        self.state_mapping = 1
+        
         return
+    
+'''
+State Mapping 1:
+
+State 0 - lose state
+State 1 - win state
+State 2 - terminal state
+State 3 - players hand sums to 4
+State 4 - players hand sums to 5
+State 5 - players hand sums to 6
+State 6 - players hand sums to 7
+...
+State 19 - players hand sums to 20
+State 20 - players hand sums to 21
+'''
 
 class BlackJack_game():
     def __init__(self, params):
@@ -45,6 +63,7 @@ class BlackJack_game():
         self.num_games = params.num_games
         self.fixed_policy_filepath = params.fixed_policy_filepath
         self.policy = self.load_policy()
+        self.state_mapping = params.state_mapping
         
         # Probably do not need to change these
         self.lose_state = 0
@@ -104,8 +123,11 @@ class BlackJack_game():
             return False
     
     # Map the current player's hand to a state index
-    def hand_to_state(self, player):
-        return self.sum_hand(player) - 1
+    def hand_to_state(self, player, dealer):
+        if self.state_mapping == 1:
+            return self.sum_hand(player) - 1
+        elif self.state_mapping == 2: # TODO: Implement
+            return self.sum_hand(player) - 1
     
     # Get reward based off of current state and action (may get rid of this 
     # function, not really being used at the moment)
@@ -163,7 +185,7 @@ class BlackJack_game():
             self.print_iter()
             
             # Current state/action/reward 
-            state = self.hand_to_state(self.player)
+            state = self.hand_to_state(self.player, self.dealer)
             action = self.get_action(state)
             reward = self.get_reward(state, action)
             
@@ -181,7 +203,7 @@ class BlackJack_game():
             # Add a row to sarsp as long as we still have more iterations
             # through the while loop
             if(not done):
-                sp = self.hand_to_state(self.player)
+                sp = self.hand_to_state(self.player, self.dealer)
                 self.sarsp.append([state, action, reward, sp])
         
         # Only for 'input' mode
@@ -256,6 +278,7 @@ def main():
     
     # Input parameters
     params = Params()
+    assert (params.action_type in ['input', 'fixed_policy', 'random_policy']), "Action type must be 'input', 'fixed_policy', or 'random_policy'"
     
     # BlackJack_game object
     game = BlackJack_game(params)
