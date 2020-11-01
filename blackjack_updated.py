@@ -14,110 +14,131 @@ import random
 class Params():
     def __init__(self):
         # 'input', 'random_policy', 'fixed_policy'
-        self.action_type = 'random_policy'
+        self.action_type = 'fixed_policy'
         
         # Only used for 'random_policy' or 'fixed_policy' input
         self.num_games = 10000
         
         # Filepath to fixed policy file (only used for 'fixed_policy' input)
-        self.fixed_policy_filepath = os.path.join(os.getcwd(), 'test_policy.policy')
+        self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy.policy')
         
         return
 
-# 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
-deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
-
-
-def draw_card():
-    return random.sample(deck, 1)[0]
-
-
-def draw_hand():
-    return [draw_card(), draw_card()]
-
-
-def usable_ace(hand):  # Does this hand have a usable ace?
-    return 1 in hand and sum(hand) + 10 <= 21
-
-
-def sum_hand(hand):  # Return current hand total
-    if usable_ace(hand):
-        return sum(hand) + 10
-    return sum(hand)
-
-
-def is_bust(hand):  # Is this hand a bust?
-    return sum_hand(hand) > 21
-
-
-def score(hand):  # What is the score of this hand (0 if bust)
-    return 0 if is_bust(hand) else sum_hand(hand)
-
-
-def player_won(player, dealer):
-    if is_bust(player):
-        return False
-    elif is_bust(dealer):
-        return True
-    elif sum_hand(player) > sum_hand(dealer):
-        return True
-    else:
-        return False
-
-def hand_to_state(player):
-    return sum_hand(player) - 1
-
-def get_reward(state, action):
-    return 0
-
 class BlackJack_game():
     def __init__(self, params):
-        self.player = draw_hand()
-        self.dealer = [draw_card()]
+        
+        # 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
+        self.deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]*4
+        random.shuffle(self.deck)
+        
+        # Player and dealer hands
+        self.player = self.draw_hand()
+        self.dealer = [self.draw_card()]
+        
+        # State, Action, Reward, Next State arrays
         self.sarsp = []
         self.sarsp_arr = np.array([], dtype='int').reshape(0,4)
         
+        # Various other parameters
         self.action_type = params.action_type # 'input', 'random_policy', 'fixed_policy'
         self.verbose = (params.action_type == 'input')
         self.num_games = params.num_games
         self.fixed_policy_filepath = params.fixed_policy_filepath
         self.policy = self.load_policy()
         
+        # Probably do not need to change these
         self.lose_state = 0
         self.win_state = 1
         self.terminal_state = 2
         
+        # Also do not need to change these
         self.lose_reward = -10
         self.win_reward = 10
         return
     
+    # Reset deck, player/dealer hands, and sarsp for a new game
     def reset(self): 
-        self.player = draw_hand()
-        self.dealer = [draw_card()]
+        self.player = self.draw_hand()
+        self.dealer = [self.draw_card()]
         self.sarsp = []
+        
+        self.deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]*4
+        random.shuffle(self.deck)
         return
     
+    # Draw random card from deck
+    def draw_card(self):
+        return self.deck.pop() 
+    
+    # Dras random hand (2 random cards from deck)
+    def draw_hand(self):
+        return [self.draw_card(), self.draw_card()]
+    
+    # Does this hand have a usable ace?
+    def usable_ace(self, hand):
+        return 1 in hand and sum(hand) + 10 <= 21
+    
+    # Return current hand total
+    def sum_hand(self, hand): 
+        if self.usable_ace(hand):
+            return sum(hand) + 10
+        return sum(hand)
+    
+    # Is this hand a bust?
+    def is_bust(self, hand): 
+        return self.sum_hand(hand) > 21
+    
+    # What is the score of this hand (0 if bust)
+    def score(self, hand):  
+        return 0 if self.is_bust(hand) else self.sum_hand(hand)
+    
+    # Return True if the player won or False if the dealer won
+    def player_won(self, player, dealer):
+        if self.is_bust(player):
+            return False
+        elif self.is_bust(dealer):
+            return True
+        elif self.sum_hand(player) > self.sum_hand(dealer):
+            return True
+        else:
+            return False
+    
+    # Map the current player's hand to a state index
+    def hand_to_state(self, player):
+        return self.sum_hand(player) - 1
+    
+    # Get reward based off of current state and action (may get rid of this 
+    # function, not really being used at the moment)
+    def get_reward(self, state, action):
+        return 0
+    
+    # Load policy from input .policy file into self.policy
     def load_policy(self):
+        
+        # Policy not needed if a user is playing or a random policy is being used
         if self.action_type in ['random_policy', 'input']:
             return None
         
+        # Read policy file and extract policy
         f = open(self.fixed_policy_filepath, 'r')
-        
         data = f.read()
         data = data.split()
-        
         policy = [int(x) for x in data]
         
         return policy
         
+    # Print data about the current player's/dealer's hands 
+    # This only used for 'input' mode where user is playing a single blackjack game
     def print_iter(self):
         if not self.verbose:
             return
         
-        print(f'Player hand: {self.player}\t\t sum: {sum_hand(self.player)}')
-        print(f'Dealer hand: {self.dealer}\t\t sum: {sum_hand(self.dealer)}')
+        print(f'Player hand: {self.player}\t\t sum: {self.sum_hand(self.player)}')
+        print(f'Dealer hand: {self.dealer}\t\t sum: {self.sum_hand(self.dealer)}')
         return
     
+    # Get action depending on if user is playing, or if a random/fixed policy
+    # is being used
     def get_action(self, state):
         if self.action_type == 'input':
             action = int(input('Hit (1) or Pass (0): '))
@@ -127,44 +148,56 @@ class BlackJack_game():
             action = self.policy[state]
         return action
         
-    
+    # Play a single game of BlackJack!
     def play_game(self):
         
+        # Only for 'input' mode
         if self.verbose:
             print('New Game!\n')
         
+        # Iterate through game
         done = False
         while(not done):
             
+            # Only for 'input' mode
             self.print_iter()
-            state = hand_to_state(self.player)
+            
+            # Current state/action/reward 
+            state = self.hand_to_state(self.player)
             action = self.get_action(state)
-            reward = get_reward(state, action)
+            reward = self.get_reward(state, action)
             
             if action:  # hit: add a card to players hand and return
-                self.player.append(draw_card())
-                if is_bust(self.player):
+                self.player.append(self.draw_card())
+                if self.is_bust(self.player):
                     done = True
                 else:
                     done = False
             else:  # stick: play out the dealers hand, and score
-                while sum_hand(self.dealer) < 17:
-                    self.dealer.append(draw_card())
+                while self.sum_hand(self.dealer) < 17:
+                    self.dealer.append(self.draw_card())
                 done = True
             
+            # Add a row to sarsp as long as we still have more iterations
+            # through the while loop
             if(not done):
-                sp = hand_to_state(self.player)
+                sp = self.hand_to_state(self.player)
                 self.sarsp.append([state, action, reward, sp])
-                
+        
+        # Only for 'input' mode
         self.print_iter()
-        player_won_bool = player_won(self.player, self.dealer)
+        
+        # Check if player won
+        player_won_bool = self.player_won(self.player, self.dealer)
+        
+        # Set next state to win state or lose state based on if player won/lost
         if player_won_bool:
             sp = self.win_state
         else:
             sp = self.lose_state
         self.sarsp.append([state, action, reward, sp])
         
-        # Add a row with 0 action, 0 reward and terminal state for next state
+        # Add a row with 0 action, win/loss reward, and terminal state for next state
         state = sp
         if player_won_bool:
             reward = self.win_reward
@@ -172,6 +205,7 @@ class BlackJack_game():
             reward = self.lose_reward
         self.sarsp.append([state, np.random.randint(2), reward, self.terminal_state])
             
+        # Only for 'input' mode
         if self.verbose:
             print(f'Player won?: {player_won_bool}')
         
@@ -180,12 +214,14 @@ class BlackJack_game():
     
         return
     
+    # Output CSV file of runs if a random_policy was used
     def output_sarsp_file(self):
-        output_filepath = os.path.join(os.getcwd(), 'random_policy_runs.txt')
+        output_filepath = os.path.join(os.getcwd(), 'random_policy_runs.csv')
         header = ['s', 'a', 'r', 'sp']
         pd.DataFrame(self.sarsp_arr).to_csv(output_filepath, header=header, index=None)
         return
     
+    # Print win/loss stats if a random or fixed policy was used
     def print_stats(self):
         num_wins = np.count_nonzero(self.sarsp_arr[:,0] == self.win_state)
         num_lose = np.count_nonzero(self.sarsp_arr[:,0] == self.lose_state)
@@ -197,29 +233,35 @@ class BlackJack_game():
         
         return
     
+    # Simulate (num_games) games of BlackJack!
     def play_games(self):
         
+        # Iterate through num_games
         for i in range(self.num_games):
             self.play_game()
             self.reset()
         
-        print(self.sarsp_arr)
+        # print(self.sarsp_arr)
         self.print_stats()
         
+        # Output CSV file of runs if a random_policy was used
         if self.action_type == 'random_policy':
             self.output_sarsp_file()
             
         return
     
-
-    
+    # End BlackJack_game class ################################################
 
 def main(): 
     
+    # Input parameters
     params = Params()
     
+    # BlackJack_game object
     game = BlackJack_game(params)
     
+    # Play one game if user is playing or simulate many if a random/fixed 
+    # policy is being used
     if params.action_type == 'input':
         game.play_game()
     else:
