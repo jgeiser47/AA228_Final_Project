@@ -17,8 +17,9 @@ class const():
     '''
     def __init__(self):
         self.gamma = 0.5
-        self.output_filename = 'QLearning_policy.policy'
-        self.n_states = 21
+        self.input_filename = 'random_policy_runs_mapping_2.csv'
+        self.output_filename = 'QLearning_policy_mapping_2.policy'
+        self.n_states = 183 # 21 for state mapping 1, 183 for state mapping 2
         self.n_action = 2
         self.alpha = 0.01
         
@@ -135,11 +136,11 @@ def write_outfile(policy, CONST):
 def main():
         
     start = time.time()
-        
-    input_file = os.path.join(os.getcwd(), 'random_policy_runs.csv')
     
     CONST = const()
-    
+        
+    input_file = os.path.join(os.getcwd(), CONST.input_filename)
+        
     train_q(input_file, CONST)
     #train_q_lambda(input_file, CONST)
     
@@ -155,37 +156,3 @@ if __name__ == '__main__':
     main()
 
 
-# def get_count_matrices(input_file, CONST):
-    
-#     df = pd.read_csv(input_file)
-    
-#     # To get our states and actions to all be zero indexed
-#     df['s'] -= 1
-#     df['a'] -= 1
-#     df['sp'] -= 1
-    
-#     N_sa = np.zeros((CONST.n_states, CONST.n_action), dtype='int')
-#     rho_sa = np.zeros((CONST.n_states, CONST.n_action), dtype='int')
-#     N_sasp = np.zeros((CONST.n_states, CONST.n_action, CONST.n_states), dtype='int')
-#     T_sasp = np.zeros((CONST.n_states, CONST.n_action, CONST.n_states), dtype='int')
-    
-    
-#     #for i in df.index:
-#     for i in range(1000):
-#         df_i = df.loc[i]
-        
-#         N_sa[df_i.s][df_i.a] += 1
-#         #N_sa_2[df_i.s][df_i.a][:] += 1
-#         N_sasp[df_i.s][df_i.a][df_i.sp] +=1
-#         rho_sa[df_i.s][df_i.a] += df_i.r
-            
-#     # To suppress divide by zero warnings (which will likely happen)
-#     # Just replace all nan with 0 
-#     with np.errstate(invalid='ignore'):
-#         R_sa = np.nan_to_num(np.divide(rho_sa, N_sa))
-#         for s in range(CONST.n_states):
-#             for a in range(CONST.n_action):
-#                 T_sasp[s][a] = np.nan_to_num(np.divide(N_sasp[s][a], N_sa[s][a]))
-    
-    
-#     return
