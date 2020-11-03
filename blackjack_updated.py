@@ -17,18 +17,18 @@ class Params():
         self.action_type = 'fixed_policy'
         
         # Only used for 'random_policy' or 'fixed_policy' input
-        self.num_games = 10000
+        self.num_games = 20000
         
         # Filepath to fixed policy file (only used for 'fixed_policy' input)
-        self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy.policy')
+        self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy')
         
         # Which state mapping algorithm to use (1 or 2)
-        self.state_mapping = 1
+        self.state_mapping = 2
         
         return
     
 '''
-State Mapping 1:
+State Mapping 1: state = players_hand - 1
 
 State 0 - lose state
 State 1 - win state
@@ -40,6 +40,25 @@ State 6 - players hand sums to 7
 ...
 State 19 - players hand sums to 20
 State 20 - players hand sums to 21
+
+-------------------------------------------------------------------------------
+
+State Mapping 2: state = (players_hand - 1) + (18 * (dealers_hand-1))
+
+State 0 - lose state
+State 1 - win state
+State 2 - terminal state
+State 3 - players hand sums to 4, dealers hand is 1
+State 4 - players hand sums to 5, dealers hand is 1
+...
+State 19 - players hand sums to 20, dealers hand is 1
+State 20 - players hand sums to 21, dealers hand is 1
+State 21 - players hand sums to 4, dealers hand is 2
+State 22 - players hand sums to 5, dealers hand is 2
+...
+State 181 - players hand sums to 20, dealers hand is 10
+State 182 - players hand sums to 21, dealers hand is 10
+
 '''
 
 class BlackJack_game():
@@ -126,13 +145,23 @@ class BlackJack_game():
     def hand_to_state(self, player, dealer):
         if self.state_mapping == 1:
             return self.sum_hand(player) - 1
-        elif self.state_mapping == 2: # TODO: Implement
-            return self.sum_hand(player) - 1
+        elif self.state_mapping == 2:
+            return (self.sum_hand(player) - 1) + (18 * (dealer[0] - 1))
     
     # Get reward based off of current state and action (may get rid of this 
     # function, not really being used at the moment)
-    def get_reward(self, state, action):
-        return 0
+    def get_reward(self, state, action, player, dealer):
+        if self.state_mapping == 1:
+            return 0
+        else:
+            if ((self.sum_hand(player) <= 11 and action == 1) or
+                (self.sum_hand(player) >= 17 and action == 0)):
+                    return 1
+            elif ((self.sum_hand(player) <= 11 and action == 0) or
+                (self.sum_hand(player) >= 17 and action == 1)):
+                return -1
+            else: 
+                return 0
     
     # Load policy from input .policy file into self.policy
     def load_policy(self):
@@ -187,7 +216,7 @@ class BlackJack_game():
             # Current state/action/reward 
             state = self.hand_to_state(self.player, self.dealer)
             action = self.get_action(state)
-            reward = self.get_reward(state, action)
+            reward = self.get_reward(state, action, self.player, self.dealer)
             
             if action:  # hit: add a card to players hand and return
                 self.player.append(self.draw_card())
@@ -238,7 +267,9 @@ class BlackJack_game():
     
     # Output CSV file of runs if a random_policy was used
     def output_sarsp_file(self):
-        output_filepath = os.path.join(os.getcwd(), 'random_policy_runs.csv')
+        filename = f'random_policy_runs_mapping_{self.state_mapping}.csv'
+        
+        output_filepath = os.path.join(os.getcwd(), filename)
         header = ['s', 'a', 'r', 'sp']
         pd.DataFrame(self.sarsp_arr).to_csv(output_filepath, header=header, index=None)
         return
@@ -251,7 +282,7 @@ class BlackJack_game():
         print(f'Number of games: {self.num_games}')
         print(f'Number of wins: {num_wins}')
         print(f'Number of losses: {num_lose}')
-        print(f'Win Percentage: {num_wins / self.num_games : .2f}')        
+        print(f'Win Percentage: {num_wins / self.num_games : .3f}')        
         
         return
     
