@@ -10,18 +10,31 @@ import os
 import pandas as pd
 import numpy as np
 
-input_file = "random_policy_runs_mapping_1.csv"
+#~~~~~~~~~~~~~~~~~
+state_mapping = 2
+#~~~~~~~~~~~~~~~~~
+
+if state_mapping == 1:
+    S = 21
+    A = 2
+    gam = 0.5
+    maxIters = 100
+    input_file = "random_policy_runs_mapping_1.csv"
+    output_file = 'Value_Iteration_Policy_1.policy'
+elif state_mapping == 2:
+    S = 183
+    A = 2
+    gam = 0.5
+    maxIters = 100
+    input_file = "random_policy_runs_mapping_2.csv"
+    output_file = 'Value_Iteration_Policy_2.policy'
+
 df = pd.read_csv(input_file)
 
 s_data = df['s']
 a_data = df['a']
 r_data = df['r']
 sp_data = df['sp']
-
-gam = 0.5
-S = 21
-A = 2
-maxIters = 100
 
 # Initialize action value function to all zeros
 U = np.zeros((S))
@@ -64,14 +77,14 @@ for k in range(len(df)):
 for s in range(S):
     for i in range(maxIters):
         for a in range(A):
-            u[a] = R[s,a] + gam* sum(T[:, s, a] * U[:])
+            u[a] = R[s,a] + gam*sum(T[:, s, a] * U[:])
             U[s] = max(u)
         if i == maxIters-1:
             policy[s] = np.argmax(u) #take greedy action once converged
 
 # Get output file name and path
 output_dir = os.getcwd()
-output_file = os.path.join(output_dir, 'Value_Iteration_Policy.policy')
+output_file = os.path.join(output_dir, output_file)
 
 # Open output file
 DF = open(output_file, 'w')
